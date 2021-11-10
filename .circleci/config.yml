@@ -1,0 +1,35 @@
+version: 2
+jobs:
+  test:
+    docker:
+      - image: ubuntu:20.04
+    steps:
+      - checkout
+      - run:
+          name: Install App
+          command: sh scripts/install.sh
+      - run:
+          name: Run Test
+          command: sh scripts/test.sh
+  build:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: Build Image
+          command: docker build -t aimlac-cc/demo .
+      - run:
+          name: Test Run
+          command: |
+            docker run -d --rm --name demo aimlac-cc/demo
+            echo -n 'Waiting For 10s '
+            for i in `seq 1 10`; do echo -n '.'; sleep 1; done; echo
+            docker run --network container:demo appropriate/curl -s --retry 10 --retry-connrefused http://localhost:8080/ok
+workflows:
+  version: 2
+  test-and-build-docker-image:
+    jobs:
+      - test
+      - build:
+          requires:
+            - test
